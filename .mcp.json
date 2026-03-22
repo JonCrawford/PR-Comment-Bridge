@@ -4,9 +4,7 @@
       "command": "ruby",
       "args": ["./server.rb"],
       "env": {
-        "WEBHOOK_PORT": "8789",
-        "GITHUB_WEBHOOK_SECRET": "",
-        "GITHUB_TOKEN": ""
+        "WEBHOOK_PORT": "8789"
       }
     }
   }

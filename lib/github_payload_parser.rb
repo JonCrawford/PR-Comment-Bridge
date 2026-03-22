@@ -4,8 +4,6 @@ module PRCommentBridge
   module GitHubPayloadParser
     module_function
 
-    # Parse a GitHub webhook payload into a human-readable content string and meta hash.
-    # Returns [content, meta] where content is the message body and meta has routing attributes.
     def parse(event_type, payload)
       case event_type
       when "issue_comment"
@@ -23,12 +21,18 @@ module PRCommentBridge
       end
     end
 
+    def common_attributes(payload)
+      {
+        repo: payload.dig("repository", "full_name") || "unknown",
+        sender: payload.dig("sender", "login") || "unknown",
+        action: payload["action"],
+      }
+    end
+
     def parse_issue_comment(payload)
-      action = payload["action"]
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
       comment = payload["comment"] || {}
       issue = payload["issue"] || {}
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
       is_pr = issue.key?("pull_request")
 
       content = <<~MSG.strip
@@ -52,11 +56,9 @@ module PRCommentBridge
     end
 
     def parse_pull_request_review(payload)
-      action = payload["action"]
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
       review = payload["review"] || {}
       pr = payload["pull_request"] || {}
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
       state = review["state"] || "unknown"
 
       content = <<~MSG.strip
@@ -81,11 +83,9 @@ module PRCommentBridge
     end
 
     def parse_review_comment(payload)
-      action = payload["action"]
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
       comment = payload["comment"] || {}
       pr = payload["pull_request"] || {}
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
 
       content = <<~MSG.strip
         PR inline review comment #{action} by #{sender} on #{repo}##{pr["number"]}
@@ -111,10 +111,8 @@ module PRCommentBridge
     end
 
     def parse_pull_request(payload)
-      action = payload["action"]
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
       pr = payload["pull_request"] || {}
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
 
       content = <<~MSG.strip
         Pull request #{action} by #{sender} on #{repo}##{pr["number"]}
@@ -136,10 +134,8 @@ module PRCommentBridge
     end
 
     def parse_issue(payload)
-      action = payload["action"]
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
       issue = payload["issue"] || {}
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
 
       content = <<~MSG.strip
         Issue #{action} by #{sender} on #{repo}##{issue["number"]}
@@ -160,9 +156,8 @@ module PRCommentBridge
     end
 
     def parse_generic(event_type, payload)
-      repo = payload.dig("repository", "full_name") || "unknown"
-      sender = payload.dig("sender", "login") || "unknown"
-      action = payload["action"] || "triggered"
+      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      action ||= "triggered"
 
       content = <<~MSG.strip
         GitHub event "#{event_type}" #{action} by #{sender} on #{repo}

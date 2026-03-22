@@ -14,7 +14,6 @@ module PRCommentBridge
       @port = port
       @webhook_secret = webhook_secret
       @allowed_senders = allowed_senders
-      @http_server = nil
     end
 
     def start
@@ -115,20 +114,13 @@ module PRCommentBridge
     def verify_signature(body, signature_header)
       return false unless signature_header
 
-      expected = "sha256=" + OpenSSL::HMAC.hexdigest(
-        OpenSSL::Digest.new("sha256"),
-        @webhook_secret,
-        body,
-      )
+      expected = "sha256=" + OpenSSL::HMAC.hexdigest("sha256", @webhook_secret, body)
 
-      Rack::Utils.secure_compare(expected, signature_header)
-    rescue NameError
-      # Rack not available, use constant-time comparison manually
       return false unless expected.bytesize == signature_header.bytesize
 
-      l = expected.unpack("C*")
-      r = signature_header.unpack("C*")
-      l.zip(r).reduce(0) { |acc, (a, b)| acc | (a ^ b) } == 0
+      left = expected.unpack("C*")
+      right = signature_header.unpack("C*")
+      left.zip(right).reduce(0) { |acc, (a, b)| acc | (a ^ b) }.zero?
     end
   end
 end

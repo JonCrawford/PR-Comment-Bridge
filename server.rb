@@ -40,6 +40,7 @@ module PRCommentBridge
   def self.run
     port = Integer(ENV.fetch("WEBHOOK_PORT", "8789"))
     webhook_secret = ENV["GITHUB_WEBHOOK_SECRET"]
+    webhook_secret = nil if webhook_secret&.empty?
     allowed_senders = ENV["ALLOWED_SENDERS"]&.split(",")&.map(&:strip)
 
     server = MCP::Server.new(

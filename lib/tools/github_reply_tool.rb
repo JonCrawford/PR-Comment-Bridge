@@ -17,7 +17,7 @@ module PRCommentBridge
           description: 'Full repository name, e.g. "owner/repo"',
         },
         number: {
-          type: "string",
+          type: "integer",
           description: "The PR or issue number",
         },
         body: {
