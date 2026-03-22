@@ -24,14 +24,14 @@ module PRCommentBridge
         AccessLog: [],
       )
 
-      @http_server.mount_proc("/") do |req, res|
-        handle_request(req, res)
-      end
-
       @http_server.mount_proc("/health") do |_req, res|
         res.status = 200
         res.content_type = "application/json"
         res.body = JSON.generate({ status: "ok" })
+      end
+
+      @http_server.mount_proc("/") do |req, res|
+        handle_request(req, res)
       end
 
       $stderr.puts "[PR-Comment-Bridge] Webhook server listening on 127.0.0.1:#{@port}"

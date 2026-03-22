@@ -22,15 +22,14 @@ module PRCommentBridge
     end
 
     def common_attributes(payload)
-      {
-        repo: payload.dig("repository", "full_name") || "unknown",
-        sender: payload.dig("sender", "login") || "unknown",
-        action: payload["action"],
-      }
+      repo = payload.dig("repository", "full_name") || "unknown"
+      sender = payload.dig("sender", "login") || "unknown"
+      action = payload["action"]
+      [repo, sender, action]
     end
 
     def parse_issue_comment(payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       comment = payload["comment"] || {}
       issue = payload["issue"] || {}
       is_pr = issue.key?("pull_request")
@@ -45,7 +44,7 @@ module PRCommentBridge
         "event" => "issue_comment",
         "action" => action,
         "repo" => repo,
-        "number" => issue["number"].to_s,
+        "number" => issue["number"],
         "sender" => sender,
         "comment_id" => comment["id"].to_s,
         "is_pull_request" => is_pr.to_s,
@@ -56,7 +55,7 @@ module PRCommentBridge
     end
 
     def parse_pull_request_review(payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       review = payload["review"] || {}
       pr = payload["pull_request"] || {}
       state = review["state"] || "unknown"
@@ -72,7 +71,7 @@ module PRCommentBridge
         "event" => "pull_request_review",
         "action" => action,
         "repo" => repo,
-        "number" => pr["number"].to_s,
+        "number" => pr["number"],
         "sender" => sender,
         "review_id" => review["id"].to_s,
         "review_state" => state,
@@ -83,7 +82,7 @@ module PRCommentBridge
     end
 
     def parse_review_comment(payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       comment = payload["comment"] || {}
       pr = payload["pull_request"] || {}
 
@@ -100,7 +99,7 @@ module PRCommentBridge
         "event" => "pull_request_review_comment",
         "action" => action,
         "repo" => repo,
-        "number" => pr["number"].to_s,
+        "number" => pr["number"],
         "sender" => sender,
         "comment_id" => comment["id"].to_s,
         "path" => comment["path"].to_s,
@@ -111,7 +110,7 @@ module PRCommentBridge
     end
 
     def parse_pull_request(payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       pr = payload["pull_request"] || {}
 
       content = <<~MSG.strip
@@ -125,7 +124,7 @@ module PRCommentBridge
         "event" => "pull_request",
         "action" => action,
         "repo" => repo,
-        "number" => pr["number"].to_s,
+        "number" => pr["number"],
         "sender" => sender,
         "html_url" => pr["html_url"].to_s,
       }
@@ -134,7 +133,7 @@ module PRCommentBridge
     end
 
     def parse_issue(payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       issue = payload["issue"] || {}
 
       content = <<~MSG.strip
@@ -147,7 +146,7 @@ module PRCommentBridge
         "event" => "issues",
         "action" => action,
         "repo" => repo,
-        "number" => issue["number"].to_s,
+        "number" => issue["number"],
         "sender" => sender,
         "html_url" => issue["html_url"].to_s,
       }
@@ -156,7 +155,7 @@ module PRCommentBridge
     end
 
     def parse_generic(event_type, payload)
-      repo, sender, action = common_attributes(payload).values_at(:repo, :sender, :action)
+      repo, sender, action = common_attributes(payload)
       action ||= "triggered"
 
       content = <<~MSG.strip
