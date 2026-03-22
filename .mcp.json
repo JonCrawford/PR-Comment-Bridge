@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "github-webhook": {
+      "command": "ruby",
+      "args": ["./server.rb"],
+      "env": {
+        "WEBHOOK_PORT": "8789",
+        "GITHUB_WEBHOOK_SECRET": "",
+        "GITHUB_TOKEN": ""
+      }
+    }
+  }
+}
