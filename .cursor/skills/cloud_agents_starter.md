@@ -6,14 +6,18 @@ Use this skill when you need to run, debug, or test the webhook bridge quickly i
 
 1. Install gems:
    - `bundle install`
-2. Set auth for GitHub reply posting:
-   - `export GITHUB_TOKEN="$(gh auth token)"`
-3. Optional runtime gates (treat these as feature-flag-like toggles):
+2. Install test dependency used by `test/verify_signature_test.rb`:
+   - `gem install minitest`
+3. Set auth for GitHub reply posting:
+   - `export GITHUB_TOKEN="<token-with-comment-permissions>"`
+   - For read-only diagnostics only, `export GITHUB_TOKEN="$(gh auth token)"` is acceptable.
+4. Optional runtime gates (treat these as feature-flag-like toggles):
    - `export WEBHOOK_PORT=8789` (default is `8789`)
    - `export GITHUB_WEBHOOK_SECRET=...` (unset to disable signature verification in local smoke tests)
    - `export ALLOWED_SENDERS="octocat,another-user"` (unset to allow all senders)
-4. Start the app:
+5. Start the app:
    - `bundle exec ruby server.rb`
+   - If running in a non-interactive script, keep stdin open: `tail -f /dev/null | WEBHOOK_PORT=8789 bundle exec ruby server.rb`
 
 Health check (new terminal):
 - `curl -sS http://127.0.0.1:${WEBHOOK_PORT:-8789}/health`
@@ -37,10 +41,10 @@ Practical smoke workflow:
 
 Concrete test workflow:
 1. Run unit tests:
-   - `bundle exec ruby -Itest test/verify_signature_test.rb`
+   - `ruby -Itest test/verify_signature_test.rb`
 2. Manual signed request check (when `GITHUB_WEBHOOK_SECRET` is set):
    - `BODY='{"action":"opened","sender":{"login":"octocat"},"repository":{"full_name":"o/r"}}'`
-   - `SIG=$(ruby -ropenssl -e 'body=ENV.fetch("BODY"); secret=ENV.fetch("GITHUB_WEBHOOK_SECRET"); puts "sha256="+OpenSSL::HMAC.hexdigest("sha256", secret, body)' BODY="$BODY")`
+   - `SIG=$(BODY="$BODY" GITHUB_WEBHOOK_SECRET="$GITHUB_WEBHOOK_SECRET" ruby -ropenssl -e 'body=ENV.fetch("BODY"); secret=ENV.fetch("GITHUB_WEBHOOK_SECRET"); puts "sha256="+OpenSSL::HMAC.hexdigest("sha256", secret, body)')`
    - `curl -i -X POST "http://127.0.0.1:${WEBHOOK_PORT:-8789}/" -H "X-GitHub-Event: issues" -H "X-Hub-Signature-256: ${SIG}" -H "Content-Type: application/json" -d "$BODY"`
 3. Negative check:
    - Send an invalid signature and expect HTTP `403`.
@@ -64,7 +68,7 @@ Concrete test workflow:
    - `gh auth status`
    - `test -n "$GITHUB_TOKEN" && echo "GITHUB_TOKEN is set"`
 2. Token/API sanity check:
-   - `curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/user | ruby -rjson -e 'j=JSON.parse(STDIN.read); puts j["login"]'`
+   - `curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/rate_limit | ruby -rjson -e 'j=JSON.parse(STDIN.read); puts j.dig("rate","limit")'`
 3. Reply behavior check (manual MCP flow):
    - Trigger an inbound webhook event containing `repo` + `number`.
    - Call `github_reply` with required args (`repo`, `number`, `body`; optional `comment_id` for threaded review replies).
@@ -85,7 +89,7 @@ Concrete test workflow:
 3. Incoming webhook has `X-GitHub-Event` header.
 4. If secret is enabled, signature header exactly matches `sha256=<hmac>`.
 5. If allowlist is enabled, sender login is present in `ALLOWED_SENDERS`.
-6. `GITHUB_TOKEN` is set before using `github_reply`.
+6. `GITHUB_TOKEN` is set before using `github_reply`, and if posting fails with `403` replace it with a token that can write PR/issue comments.
 
 ## 5) How to keep this skill current
 
