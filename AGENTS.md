@@ -4,13 +4,15 @@
 
 This is a **GitHub Webhook MCP Channel Server** (`PRCommentBridge`) written in Ruby. It receives GitHub webhooks via a WEBrick HTTP server and bridges them to Claude Code over MCP stdio transport.
 
+**Ruby version:** 4.0.2 (compiled from source at `/usr/local/bin/ruby`).
+
 ### Running tests
 
 ```
 ruby test/verify_signature_test.rb
 ```
 
-`minitest` is used (Ruby stdlib in 3.2). Tests do not require `bundle exec` since they only depend on stdlib + project files.
+`minitest` is used. In Ruby 4.0+, minitest is a bundled gem and must be installed separately (`sudo /usr/local/bin/gem install minitest`). Tests run with plain `ruby` (not `bundle exec`) since minitest isn't in the Gemfile.
 
 ### Running the server
 
@@ -38,6 +40,7 @@ The WEBrick webhook listener runs on `127.0.0.1:8789` by default (configurable v
 
 ### Gotchas
 
-- Gems install to `vendor/bundle` (configured via `.bundle/config`) to avoid system permission issues.
-- `minitest` is a Ruby stdlib gem but may need `sudo gem install minitest` if not present in the system Ruby installation.
+- Ruby 4.0.2 is compiled from source at `/usr/local`. Gems install to `/usr/local/lib/ruby/gems/4.0.0` (use `sudo` for `bundle install` and `gem install`).
+- In Ruby 4.0+, `minitest` is a bundled gem (not auto-available). Install it separately: `sudo /usr/local/bin/gem install minitest --no-document`.
 - The server process exits immediately if stdin closes (no MCP client connected). Use the `tail -f /dev/null |` pipe trick for standalone HTTP testing.
+- The update script compiles Ruby from source if `/usr/local/bin/ruby` is missing. This takes ~90 seconds but only runs once per fresh VM.
